@@ -113,11 +113,11 @@
     .tocopilot-body {
       display: grid;
       align-content: start;
-      gap: 12px;
+      gap: 10px;
       overflow-y: auto;
       overflow-x: hidden;
       padding: 14px;
-      background: #f6f7f9;
+      background: #f7f9fc;
     }
 
     .tocopilot-message {
@@ -130,29 +130,32 @@
       background: #ffffff;
       font-size: 14px;
       line-height: 1.45;
-      white-space: pre-wrap;
+      white-space: normal;
       overflow-wrap: anywhere;
+    }
+
+    .tocopilot-message-text {
+      white-space: pre-wrap;
     }
 
     .tocopilot-message.user {
       justify-self: end;
-      max-width: 88%;
+      max-width: 84%;
       border-color: #14532d;
+      border-radius: 14px 14px 4px 14px;
       background: #dcfce7;
       color: #052e16;
+    }
+
+    .tocopilot-message:not(.user) {
+      justify-self: start;
+      border-radius: 14px 14px 14px 4px;
     }
 
     .tocopilot-message.error {
       border-color: #fecdd3;
       background: #fff1f2;
       color: #9f1239;
-    }
-
-    .tocopilot-meta {
-      margin-top: 8px;
-      color: #667085;
-      font-size: 12px;
-      overflow-wrap: anywhere;
     }
 
     .tocopilot-samples {
@@ -394,12 +397,9 @@
   function createMessage({ role, text, type = "", payload = null }) {
     const wrapper = document.createElement("article");
     wrapper.className = `tocopilot-message ${role === "user" ? "user" : ""} ${type}`;
-    wrapper.innerHTML = `
-      <div>${escapeHtml(text)}</div>
-      ${payload?.intent ? `<div class="tocopilot-meta">Intent: ${escapeHtml(payload.intent)}</div>` : ""}
-      ${payload?.sources?.length ? `<div class="tocopilot-meta">Sources: ${payload.sources.map((source) => escapeHtml(source.endpoint)).join(", ")}</div>` : ""}
-      ${payload?.data ? renderTable(payload.data) : ""}
-    `;
+    wrapper.innerHTML = `<div class="tocopilot-message-text">${escapeHtml(text)}</div>${
+      payload?.data ? renderTable(payload.data) : ""
+    }`;
     return wrapper;
   }
 

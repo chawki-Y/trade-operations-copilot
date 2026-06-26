@@ -11,6 +11,11 @@
   const ROOT_ID = "trade-ops-copilot-root";
 
   const styles = `
+    #trade-ops-copilot-root,
+    #trade-ops-copilot-root * {
+      box-sizing: border-box;
+    }
+
     .tocopilot-button {
       position: fixed;
       right: 22px;
@@ -47,13 +52,15 @@
 
     .tocopilot-panel {
       position: fixed;
-      top: 18px;
-      right: 18px;
+      top: 14px;
+      right: 14px;
       z-index: 9999;
       display: none;
       grid-template-rows: auto 1fr auto;
-      width: min(440px, calc(100vw - 28px));
-      height: min(760px, calc(100vh - 36px));
+      width: min(430px, calc(100vw - 28px));
+      max-width: calc(100vw - 28px);
+      height: min(760px, calc(100vh - 28px));
+      min-width: 0;
       overflow: hidden;
       border: 1px solid #d8dde3;
       border-radius: 12px;
@@ -72,6 +79,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      min-width: 0;
       padding: 16px;
       border-bottom: 1px solid #e5e7eb;
       background: #f8fafc;
@@ -81,12 +89,14 @@
       margin: 0;
       font-size: 16px;
       font-weight: 800;
+      overflow-wrap: anywhere;
     }
 
     .tocopilot-subtitle {
       margin: 4px 0 0;
       color: #667085;
       font-size: 12px;
+      overflow-wrap: anywhere;
     }
 
     .tocopilot-close {
@@ -105,12 +115,15 @@
       align-content: start;
       gap: 12px;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 14px;
       background: #f6f7f9;
     }
 
     .tocopilot-message {
-      max-width: 92%;
+      width: fit-content;
+      max-width: 100%;
+      min-width: 0;
       border: 1px solid #d8dde3;
       border-radius: 10px;
       padding: 11px 12px;
@@ -118,10 +131,12 @@
       font-size: 14px;
       line-height: 1.45;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     .tocopilot-message.user {
       justify-self: end;
+      max-width: 88%;
       border-color: #14532d;
       background: #dcfce7;
       color: #052e16;
@@ -137,15 +152,18 @@
       margin-top: 8px;
       color: #667085;
       font-size: 12px;
+      overflow-wrap: anywhere;
     }
 
     .tocopilot-samples {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      min-width: 0;
     }
 
     .tocopilot-sample {
+      max-width: 100%;
       border: 1px solid #d8dde3;
       border-radius: 999px;
       background: #ffffff;
@@ -154,41 +172,66 @@
       padding: 7px 10px;
       font-size: 12px;
       font-weight: 700;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+      text-align: left;
+      white-space: normal;
     }
 
     .tocopilot-table-wrap {
+      width: 100%;
       max-width: 100%;
       margin-top: 10px;
-      overflow-x: auto;
+      overflow: hidden;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
+      background: #ffffff;
     }
 
-    .tocopilot-table {
-      min-width: 420px;
-      width: 100%;
-      border-collapse: collapse;
+    .tocopilot-result-list {
+      display: grid;
       font-size: 12px;
     }
 
-    .tocopilot-table th,
-    .tocopilot-table td {
-      padding: 8px;
+    .tocopilot-result-card {
+      display: grid;
+      gap: 2px;
+      padding: 8px 0;
       border-bottom: 1px solid #e5e7eb;
-      text-align: left;
-      white-space: nowrap;
     }
 
-    .tocopilot-table th {
-      background: #f8fafc;
-      color: #475467;
+    .tocopilot-result-card:last-child {
+      border-bottom: 0;
+    }
+
+    .tocopilot-result-field {
+      display: grid;
+      grid-template-columns: minmax(92px, 34%) minmax(0, 1fr);
+      gap: 8px;
+      padding: 8px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .tocopilot-result-label {
+      color: #667085;
       font-size: 11px;
+      font-weight: 800;
       text-transform: uppercase;
+      overflow-wrap: anywhere;
+    }
+
+    .tocopilot-result-value {
+      min-width: 0;
+      color: #1f2933;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .tocopilot-form {
       display: flex;
       gap: 8px;
+      min-width: 0;
       padding: 12px;
       border-top: 1px solid #e5e7eb;
       background: #ffffff;
@@ -225,11 +268,39 @@
         inset: 8px;
         width: auto;
         height: auto;
+        max-width: none;
+        border-radius: 10px;
       }
 
       .tocopilot-button {
         right: 14px;
         bottom: 14px;
+      }
+
+      .tocopilot-header {
+        padding: 14px;
+      }
+
+      .tocopilot-body {
+        padding: 12px;
+      }
+
+      .tocopilot-message.user {
+        max-width: 94%;
+      }
+
+      .tocopilot-result-field {
+        grid-template-columns: minmax(86px, 34%) minmax(0, 1fr);
+        padding: 5px 8px;
+      }
+
+      .tocopilot-form {
+        grid-template-columns: minmax(0, 1fr);
+        display: grid;
+      }
+
+      .tocopilot-send {
+        width: 100%;
       }
     }
   `;
@@ -277,22 +348,24 @@
     }
 
     const columns = Object.keys(rows[0]).slice(0, 6);
-    const head = columns.map((column) => `<th>${escapeHtml(column)}</th>`).join("");
     const body = rows
       .map((row) => {
-        const cells = columns
-          .map((column) => `<td>${escapeHtml(formatValue(row[column]))}</td>`)
+        const fields = columns
+          .map(
+            (column) =>
+              `<div class="tocopilot-result-field">
+                <span class="tocopilot-result-label">${escapeHtml(column)}</span>
+                <span class="tocopilot-result-value">${escapeHtml(formatValue(row[column]))}</span>
+              </div>`
+          )
           .join("");
-        return `<tr>${cells}</tr>`;
+        return `<div class="tocopilot-result-card">${fields}</div>`;
       })
       .join("");
 
     return `
       <div class="tocopilot-table-wrap">
-        <table class="tocopilot-table">
-          <thead><tr>${head}</tr></thead>
-          <tbody>${body}</tbody>
-        </table>
+        <div class="tocopilot-result-list">${body}</div>
       </div>
     `;
   }

@@ -13,7 +13,10 @@ The current agent is tailored for a trade operations dashboard that exposes trad
 - Opens a right-side popup panel with a chat-style assistant
 - Calls a FastAPI copilot backend
 - Uses the existing Trade Operations API as its tool source
-- Answers analyst questions about trades, rejected trades, market data, audit logs, P&L, and operational risk
+- Classifies user intent before taking action
+- Explains the application and trade operations concepts without generating SQL
+- Answers analyst questions about trades, instruments, rejected trades, market data, audit logs, P&L, and operational risk
+- Generates and validates SQL only for clear operational data questions in the standalone SQL flow
 - Keeps a standalone demo UI for testing without importing into another project
 
 ## Architecture
@@ -23,10 +26,13 @@ flowchart LR
     Website[Host website] --> Widget[Embeddable JS widget]
     Template[Standalone template UI] --> Widget
     Widget --> CopilotAPI[FastAPI copilot backend]
-    CopilotAPI --> Agent[Trade operations agent service]
+    CopilotAPI --> Classifier[Intent classifier]
+    Classifier --> Agent[Trade operations agent service]
+    Classifier --> Explainer[Application and concept answers]
     Agent --> TradeAPI[Existing Node/Express Trade Operations API]
     TradeAPI --> DB[(PostgreSQL)]
     Agent --> OpenAI[Optional OpenAI summarization]
+    CopilotAPI --> SQLFlow[Safe SQL flow for standalone data queries]
     CopilotAPI --> Widget
 ```
 
@@ -35,6 +41,7 @@ flowchart LR
 ```text
 backend/
   app/api/routes.py                 FastAPI routes
+  app/services/intent_classifier.py Intent classification rules
   app/services/trade_ops_agent.py   Agent intent routing and answers
   app/services/trade_ops_client.py  Client for the host Trade Operations API
   app/schemas/agent.py              Agent request/response contracts
@@ -72,6 +79,18 @@ Primary widget endpoints:
 - `GET /agent/sample-questions`
 - `POST /agent/ask`
 
+The `/agent/ask` response includes:
+
+- `answer`
+- `intent`
+- `generatedSql`
+- `columns`
+- `rows`
+- `rowCount`
+- `error`
+
+For explanation, concept, small-talk, or unknown messages, `generatedSql` is `null` and `columns`/`rows` are empty. For operational data questions, the agent calls the existing Trade Operations API and returns a clean natural-language answer plus structured rows when useful.
+
 Utility endpoints:
 
 - `GET /health`
@@ -84,6 +103,11 @@ Utility endpoints:
 
 Examples:
 
+- What is this app about?
+- What can this copilot do?
+- What is a trade?
+- What is P&L?
+- What are the available instruments to use?
 - Give me an operations morning summary.
 - Show me today's rejected trades.
 - Why was trade TRD-20260625-000004 rejected?
@@ -153,10 +177,19 @@ For local development:
 
 ## Agent Design
 
-The agent uses the existing system API instead of duplicating business rules:
+The agent first classifies each user message:
+
+- `APP_EXPLANATION`: explains the Trade Operations Management System.
+- `CONCEPT_EXPLANATION`: explains concepts such as trades, P&L, audit trail, rejected trades, and stale market data.
+- `SMALL_TALK`: responds naturally and suggests useful prompts.
+- `DATA_QUERY`: retrieves operational data or runs the standalone safe-SQL flow.
+- `UNKNOWN`: gives a helpful nudge with examples instead of pretending to have queried data.
+
+For the embedded widget, the agent uses the existing system API instead of duplicating business rules:
 
 - `/api/operations/summary`
 - `/api/operations/investigate/:tradeId`
+- `/api/instruments`
 - `/api/trades`
 - `/api/trades/report`
 - `/api/market-overview`
@@ -164,6 +197,17 @@ The agent uses the existing system API instead of duplicating business rules:
 - `/api/audit-logs`
 
 This keeps the copilot aligned with the source system and makes the widget portable.
+
+The standalone `/ask` endpoint keeps strict SQL safety rules:
+
+- only `SELECT`
+- no multiple statements
+- no comments
+- no DDL/DML keywords
+- whitelisted tables only
+- automatic `LIMIT 100` when missing
+
+SQL is generated only when the classifier identifies a clear data query.
 
 ## Tests
 

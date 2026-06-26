@@ -58,7 +58,10 @@ export function Sidebar({ history, examples, onExampleClick }) {
                     <MessageSquareText className="mt-0.5 shrink-0 text-cyan-300" size={15} aria-hidden="true" />
                     <div className="min-w-0">
                       <p className="line-clamp-2 text-sm text-neutral-100">{item.question}</p>
-                      <p className="mt-1 text-xs text-neutral-500">{item.row_count} rows</p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {item.intent ? `${item.intent.replaceAll("_", " ")} · ` : ""}
+                        {item.row_count} rows
+                      </p>
                     </div>
                   </div>
                 </button>

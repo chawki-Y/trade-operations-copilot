@@ -27,6 +27,18 @@ def test_agent_sample_questions() -> None:
     assert "Give me an operations morning summary." in response.json()
 
 
+def test_agent_explains_application_without_data_query() -> None:
+    response = client.post("/agent/ask", json={"question": "What is this app about?"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["intent"] == "APP_EXPLANATION"
+    assert payload["generatedSql"] is None
+    assert payload["columns"] == []
+    assert payload["rows"] == []
+    assert "Trade Operations Management System" in payload["answer"]
+
+
 def test_schema_contains_capital_markets_tables() -> None:
     response = client.get("/schema")
 

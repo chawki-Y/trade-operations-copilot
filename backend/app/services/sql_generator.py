@@ -19,7 +19,8 @@ SAMPLE_QUESTIONS = [
 ]
 
 SYSTEM_PROMPT = f"""
-You are a capital markets SQL analyst supporting a trading operations team.
+You are the AI Trade Operations Copilot embedded inside a Trade Operations Management System
+used by middle-office and operations analysts.
 Generate exactly one PostgreSQL SELECT query for the user's question.
 Use only the schema below. Do not use comments, DDL, DML, or multiple statements.
 Return SQL only, with no markdown and no explanation.
@@ -66,6 +67,19 @@ class SQLGenerator:
                 "WHERE t.status = 'Pending Validation' "
                 "ORDER BY t.trade_date DESC",
                 "Trades currently waiting for validation.",
+            )
+
+        if "rejected" in q and "trade" in q:
+            return (
+                "SELECT t.trade_id, i.symbol, c.name AS counterparty, b.name AS book, "
+                "t.trade_date, t.side, t.quantity, t.notional, t.status "
+                "FROM trades t "
+                "JOIN instruments i ON i.id = t.instrument_id "
+                "JOIN counterparties c ON c.id = t.counterparty_id "
+                "JOIN books b ON b.id = t.book_id "
+                "WHERE LOWER(t.status) = 'rejected' "
+                "ORDER BY t.trade_date DESC",
+                "Rejected trade records.",
             )
 
         if "failed" in q and "settlement" in q:

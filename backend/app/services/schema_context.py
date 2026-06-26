@@ -70,7 +70,7 @@ TABLES = [
     ),
     TableInfo(
         name="query_history",
-        columns=["id", "question", "generated_sql", "answer", "row_count", "created_at"],
+        columns=["id", "question", "intent", "generated_sql", "answer", "row_count", "created_at"],
         description="Audit trail of user questions, generated SQL, and result sizes.",
     ),
 ]
@@ -91,7 +91,7 @@ trades(id, trade_id, instrument_id, counterparty_id, book_id, portfolio_id,
 market_prices(id, instrument_id, price_date, close_price, source)
 settlements(id, trade_id, counterparty_id, settlement_date, status, cash_amount,
             currency, failure_reason)
-query_history(id, question, generated_sql, answer, row_count, created_at)
+query_history(id, question, intent, generated_sql, answer, row_count, created_at)
 
 Relationships:
 - trades.instrument_id -> instruments.id

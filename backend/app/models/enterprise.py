@@ -129,7 +129,8 @@ class QueryHistory(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     question: Mapped[str] = mapped_column(Text, nullable=False)
-    generated_sql: Mapped[str] = mapped_column(Text, nullable=False)
+    intent: Mapped[str] = mapped_column(String(60), nullable=False, default="UNKNOWN")
+    generated_sql: Mapped[str | None] = mapped_column(Text)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(

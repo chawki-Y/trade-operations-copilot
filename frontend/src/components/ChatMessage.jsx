@@ -3,7 +3,7 @@ import { Bot, ChevronDown, Code2, TriangleAlert, UserRound } from "lucide-react"
 
 function ResultTable({ columns, rows }) {
   if (!rows?.length) {
-    return <div className="rounded-md border border-white/10 p-3 text-sm text-neutral-400">No rows returned.</div>;
+    return null;
   }
 
   return (
@@ -39,6 +39,11 @@ function ResultTable({ columns, rows }) {
 export function ChatMessage({ message }) {
   const isUser = message.role === "user";
   const isError = message.type === "error";
+  const generatedSql = message.generatedSql || message.generated_sql || message.sql;
+  const rows = message.rows || [];
+  const columns = message.columns || [];
+  const shouldShowResults = rows.length > 0 && columns.length > 0;
+  const shouldShowSql = Boolean(generatedSql);
 
   return (
     <article className={`flex w-full min-w-0 gap-0 sm:gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
@@ -67,24 +72,34 @@ export function ChatMessage({ message }) {
             <span className="min-w-0 break-words">{message.content}</span>
           </p>
 
-          {message.sql && (
-            <div className="mt-4 space-y-4">
-              <details className="group rounded-md border border-white/10 bg-neutral-950">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-neutral-200">
-                  <span className="flex items-center gap-2">
-                    <Code2 size={16} aria-hidden="true" />
-                    Generated SQL
-                  </span>
-                  <ChevronDown className="transition group-open:rotate-180" size={16} aria-hidden="true" />
-                </summary>
-                <pre className="overflow-x-auto border-t border-white/10 p-3 text-xs leading-5 text-emerald-200">
-                  <code>{message.sql}</code>
-                </pre>
-              </details>
+          {!isUser && message.intent && (
+            <span className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-neutral-400">
+              {message.intent.replaceAll("_", " ")}
+            </span>
+          )}
 
-              <div className="min-w-0">
-                <ResultTable columns={message.columns} rows={message.rows} />
-              </div>
+          {(shouldShowSql || shouldShowResults) && (
+            <div className="mt-4 space-y-4">
+              {shouldShowSql && (
+                <details className="group rounded-md border border-white/10 bg-neutral-950">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-sm font-medium text-neutral-200">
+                    <span className="flex items-center gap-2">
+                      <Code2 size={16} aria-hidden="true" />
+                      Generated SQL
+                    </span>
+                    <ChevronDown className="transition group-open:rotate-180" size={16} aria-hidden="true" />
+                  </summary>
+                  <pre className="overflow-x-auto border-t border-white/10 p-3 text-xs leading-5 text-emerald-200">
+                    <code>{generatedSql}</code>
+                  </pre>
+                </details>
+              )}
+
+              {shouldShowResults && (
+                <div className="min-w-0">
+                  <ResultTable columns={columns} rows={rows} />
+                </div>
+              )}
             </div>
           )}
         </div>

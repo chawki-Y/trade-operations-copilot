@@ -88,7 +88,8 @@ CREATE TABLE settlements (
 CREATE TABLE query_history (
     id SERIAL PRIMARY KEY,
     question TEXT NOT NULL,
-    generated_sql TEXT NOT NULL,
+    intent VARCHAR(60) NOT NULL DEFAULT 'UNKNOWN',
+    generated_sql TEXT,
     answer TEXT NOT NULL,
     row_count INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()

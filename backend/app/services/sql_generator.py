@@ -69,6 +69,14 @@ class SQLGenerator:
                 "Trades currently waiting for validation.",
             )
 
+        if "instrument" in q and any(term in q for term in ["available", "use", "dropdown", "select"]):
+            return (
+                "SELECT symbol, name, asset_class, currency "
+                "FROM instruments "
+                "ORDER BY asset_class, symbol",
+                "Available trade capture instruments.",
+            )
+
         if "rejected" in q and "trade" in q:
             return (
                 "SELECT t.trade_id, i.symbol, c.name AS counterparty, b.name AS book, "

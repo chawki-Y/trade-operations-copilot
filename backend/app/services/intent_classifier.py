@@ -23,11 +23,11 @@ class IntentClassifier:
         if self._is_app_explanation(normalized):
             return Intent.APP_EXPLANATION
 
-        if self._is_concept_explanation(normalized):
-            return Intent.CONCEPT_EXPLANATION
-
         if self._is_data_query(normalized):
             return Intent.DATA_QUERY
+
+        if self._is_concept_explanation(normalized):
+            return Intent.CONCEPT_EXPLANATION
 
         return Intent.UNKNOWN
 
@@ -70,6 +70,9 @@ class IntentClassifier:
 
     @staticmethod
     def _is_concept_explanation(text: str) -> bool:
+        if text in {"trade", "trades", "p&l", "pnl", "settlement", "audit trail"}:
+            return True
+
         concept_terms = [
             "p&l",
             "pnl",
@@ -80,6 +83,8 @@ class IntentClassifier:
             "stale market data",
             "market data freshness",
             "booked trade",
+            "trade",
+            "trades",
             "trade lifecycle",
             "settlement",
             "middle office",
@@ -90,6 +95,11 @@ class IntentClassifier:
     @staticmethod
     def _is_data_query(text: str) -> bool:
         if re.search(r"\bTRD-\d{8}-\d{6}\b", text.upper()):
+            return True
+
+        if ("instrument" in text or "instruments" in text) and any(
+            term in text for term in ["available", "use", "dropdown", "select", "supported"]
+        ):
             return True
 
         action_terms = [
@@ -109,6 +119,7 @@ class IntentClassifier:
             "give me",
             "is any",
             "are any",
+            "available",
         ]
         data_terms = [
             "trade",

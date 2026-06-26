@@ -191,6 +191,13 @@ def _answer_without_sql(question: str, intent: Intent) -> str:
                 "It helps analysts understand what happened to a trade, market data refresh, or "
                 "operations workflow."
             )
+        if "trade" in normalized:
+            return (
+                "A trade is a transaction captured by the operations system, such as buying or "
+                "selling an instrument against a counterparty. In this dashboard, each trade has "
+                "an instrument, side, quantity, price, status, P&L, audit trail, and lifecycle "
+                "state such as NEW, VALIDATED, BOOKED, or REJECTED."
+            )
         return (
             "I can explain trade operations concepts such as P&L, rejected trades, audit trails, "
             "settlements, and market data freshness in the context of this dashboard."

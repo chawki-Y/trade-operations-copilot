@@ -72,12 +72,6 @@ export function ChatMessage({ message }) {
             <span className="min-w-0 break-words">{message.content}</span>
           </p>
 
-          {!isUser && message.intent && (
-            <span className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-neutral-400">
-              {message.intent.replaceAll("_", " ")}
-            </span>
-          )}
-
           {(shouldShowSql || shouldShowResults) && (
             <div className="mt-4 space-y-4">
               {shouldShowSql && (

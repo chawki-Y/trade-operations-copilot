@@ -51,6 +51,11 @@ class TradeOpsAgent:
         if trade_id and "audit" in normalized:
             return self._answer_trade_audit(question, trade_id)
 
+        if ("instrument" in normalized or "instruments" in normalized) and any(
+            term in normalized for term in ["available", "use", "dropdown", "select", "supported", "show", "list"]
+        ):
+            return self._answer_available_instruments(question)
+
         if "rejected" in normalized or "rejection" in normalized:
             return self._answer_rejected_trades(question)
 
@@ -100,6 +105,13 @@ class TradeOpsAgent:
                 "A rejected trade is a trade that failed validation and was not accepted into "
                 "the normal booked trade flow. In this system, rejection reasons can come from "
                 "instrument validation, missing or invalid fields, or other control checks."
+            )
+        elif "trade" in normalized:
+            answer = (
+                "A trade is a transaction captured by the operations system, such as buying or "
+                "selling an instrument against a counterparty. In this dashboard, each trade has "
+                "an instrument, side, quantity, price, status, P&L, audit trail, and lifecycle "
+                "state such as NEW, VALIDATED, BOOKED, or REJECTED."
             )
         elif "market data health" in normalized or "market data freshness" in normalized:
             answer = (
@@ -157,14 +169,47 @@ class TradeOpsAgent:
             question=question,
             intent=Intent.UNKNOWN.value,
             answer=(
-                "I can help with this Trade Operations Management System, but I need a clearer "
-                "question. Try asking about the dashboard, a trade operations concept, or a "
-                "specific data request."
+                "I can help with trade operations questions. For example, ask me to explain a "
+                "concept like 'What is a trade?', list reference data like 'What instruments are "
+                "available?', or investigate live operations data like 'Show today's rejected "
+                "trades.'"
             ),
             suggestions=[
                 "What is this app about?",
                 "Is any market data stale?",
                 "Why was trade TRD-20260625-000004 rejected?",
+            ],
+        )
+
+    def _answer_available_instruments(self, question: str) -> AgentResponse:
+        instruments = self.client.get("/api/instruments")
+        rows = [item for item in instruments if isinstance(item, dict)]
+        symbols = [str(item.get("symbol")) for item in rows if item.get("symbol")]
+        asset_classes = sorted({str(item.get("asset_class")) for item in rows if item.get("asset_class")})
+
+        if rows:
+            answer = (
+                f"There are {len(rows)} available instruments in the trade capture dropdown: "
+                f"{', '.join(symbols)}."
+            )
+            if asset_classes:
+                answer += f" They cover {', '.join(asset_classes)}."
+        else:
+            answer = "No available instruments were returned by the Trade Operations API."
+
+        return AgentResponse(
+            question=question,
+            intent=Intent.DATA_QUERY.value,
+            answer=answer,
+            data=rows,
+            columns=["symbol", "name", "asset_class", "currency"],
+            rows=rows,
+            row_count=len(rows),
+            sources=[AgentSource(label="Instruments", endpoint="/api/instruments")],
+            suggestions=[
+                "Show today's rejected trades.",
+                "What is a trade?",
+                "What happened with AAPL market price?",
             ],
         )
 

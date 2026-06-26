@@ -158,21 +158,6 @@
       color: #9f1239;
     }
 
-    .tocopilot-intent {
-      display: inline-flex;
-      width: fit-content;
-      margin-top: 8px;
-      border: 1px solid #d8dde3;
-      border-radius: 999px;
-      background: #f8fafc;
-      color: #667085;
-      padding: 3px 7px;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0;
-      text-transform: uppercase;
-    }
-
     .tocopilot-sql {
       max-width: 100%;
       margin-top: 10px;
@@ -426,14 +411,10 @@
   function createMessage({ role, text, type = "", payload = null }) {
     const wrapper = document.createElement("article");
     wrapper.className = `tocopilot-message ${role === "user" ? "user" : ""} ${type}`;
-    const intentBadge =
-      payload?.intent && role !== "user"
-        ? `<div class="tocopilot-intent">${escapeHtml(payload.intent.replaceAll("_", " "))}</div>`
-        : "";
     const sqlBlock = payload?.generatedSql
       ? `<pre class="tocopilot-sql"><code>${escapeHtml(payload.generatedSql)}</code></pre>`
       : "";
-    wrapper.innerHTML = `<div class="tocopilot-message-text">${escapeHtml(text)}</div>${intentBadge}${sqlBlock}${renderTable(
+    wrapper.innerHTML = `<div class="tocopilot-message-text">${escapeHtml(text)}</div>${sqlBlock}${renderTable(
       payload
     )}`;
     return wrapper;

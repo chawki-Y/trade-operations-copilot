@@ -235,3 +235,7 @@ pytest
 - Deeper tool calling with structured action plans
 - Theming options for host applications
 - Authentication between the host website and copilot backend
+
+## License
+
+This project is available under the [MIT License](LICENSE).

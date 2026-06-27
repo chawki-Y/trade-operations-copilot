@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 import re
 from typing import Any
 
@@ -58,6 +58,12 @@ class TradeOpsAgent:
 
         if "rejected" in normalized or "rejection" in normalized:
             return self._answer_rejected_trades(question)
+
+        if "trade" in normalized and (
+            any(status in normalized for status in ["booked", "validated", "new"])
+            or self._temporal_scope(normalized) is not None
+        ):
+            return self._answer_trades(question)
 
         if "stale" in normalized or "market data" in normalized and "any" in normalized:
             return self._answer_market_data_health(question)
@@ -245,16 +251,19 @@ class TradeOpsAgent:
 
     def _answer_rejected_trades(self, question: str) -> AgentResponse:
         trades = self.client.get("/api/trades")
-        today = date.today().isoformat()
-        rejected = [
-            trade
-            for trade in trades
-            if trade.get("Status") == "REJECTED" and str(trade.get("TradeDate", "")).startswith(today)
-        ]
-        if not rejected:
-            rejected = [trade for trade in trades if trade.get("Status") == "REJECTED"]
+        rejected = [trade for trade in trades if trade.get("Status") == "REJECTED"]
+        scope = self._temporal_scope(question)
+        if scope:
+            label, start_date, end_date = scope
+            rejected = self._filter_trades_by_date(rejected, start_date, end_date)
+        else:
+            label = None
 
-        answer = f"Found {len(rejected)} rejected trade{'s' if len(rejected) != 1 else ''}."
+        period = f" for {label}" if label else ""
+        answer = (
+            f"Found {len(rejected)} rejected trade"
+            f"{'s' if len(rejected) != 1 else ''}{period}."
+        )
         if rejected:
             top = rejected[0]
             answer += (
@@ -272,6 +281,40 @@ class TradeOpsAgent:
                 "Summarize audit logs for this trade.",
                 "Give me an operations morning summary.",
             ],
+        )
+
+    def _answer_trades(self, question: str) -> AgentResponse:
+        trades = [trade for trade in self.client.get("/api/trades") if isinstance(trade, dict)]
+        normalized = question.lower()
+        status = next(
+            (
+                candidate
+                for candidate in ["BOOKED", "VALIDATED", "NEW"]
+                if candidate.lower() in normalized
+            ),
+            None,
+        )
+        if status:
+            trades = [trade for trade in trades if trade.get("Status") == status]
+
+        scope = self._temporal_scope(normalized)
+        if scope:
+            label, start_date, end_date = scope
+            trades = self._filter_trades_by_date(trades, start_date, end_date)
+        else:
+            label = None
+
+        trade_label = f" {status.lower()}" if status else ""
+        period = f" for {label}" if label else ""
+        answer = f"Found {len(trades)}{trade_label} trade{'s' if len(trades) != 1 else ''}{period}."
+
+        return self._maybe_enhance(
+            question=question,
+            intent="trades",
+            answer=answer,
+            data=trades,
+            sources=[AgentSource(label="Trades", endpoint="/api/trades")],
+            suggestions=["Show today's rejected trades.", "Summarize today's P&L."],
         )
 
     def _answer_trade_investigation(self, question: str, trade_id: str) -> AgentResponse:
@@ -387,6 +430,29 @@ class TradeOpsAgent:
         )
 
     def _answer_pnl(self, question: str) -> AgentResponse:
+        scope = self._temporal_scope(question)
+        if scope:
+            label, start_date, end_date = scope
+            trades = [
+                trade
+                for trade in self.client.get("/api/trades")
+                if isinstance(trade, dict) and trade.get("Status") == "BOOKED"
+            ]
+            trades = self._filter_trades_by_date(trades, start_date, end_date)
+            total_pnl = sum(NumberHelper.to_float(trade.get("PnL")) for trade in trades)
+            answer = (
+                f"Booked-trade P&L for {label} is {self._money(total_pnl)} "
+                f"across {len(trades)} trade{'s' if len(trades) != 1 else ''}."
+            )
+            return self._maybe_enhance(
+                question=question,
+                intent="pnl_summary",
+                answer=answer,
+                data=trades,
+                sources=[AgentSource(label="Trades", endpoint="/api/trades")],
+                suggestions=["Show today's rejected trades.", "Highlight operational risks."],
+            )
+
         report = self.client.get("/api/trades/report")
         summary = self.client.get("/api/operations/summary")
         answer = (
@@ -503,6 +569,45 @@ class TradeOpsAgent:
             if candidate not in ignored and not candidate.startswith("TRD"):
                 return candidate
         return None
+
+    @staticmethod
+    def _temporal_scope(text: str, today: date | None = None) -> tuple[str, date, date] | None:
+        normalized = text.lower()
+        current_date = today or date.today()
+
+        if "yesterday" in normalized:
+            start_date = current_date - timedelta(days=1)
+            return "yesterday", start_date, current_date
+        if "this week" in normalized:
+            start_date = current_date - timedelta(days=current_date.weekday())
+            return "this week", start_date, start_date + timedelta(days=7)
+        if "this month" in normalized:
+            start_date = current_date.replace(day=1)
+            if start_date.month == 12:
+                end_date = start_date.replace(year=start_date.year + 1, month=1)
+            else:
+                end_date = start_date.replace(month=start_date.month + 1)
+            return "this month", start_date, end_date
+        if "today" in normalized:
+            return "today", current_date, current_date + timedelta(days=1)
+        return None
+
+    @staticmethod
+    def _filter_trades_by_date(
+        trades: list[dict[str, Any]],
+        start_date: date,
+        end_date: date,
+    ) -> list[dict[str, Any]]:
+        filtered = []
+        for trade in trades:
+            raw_date = str(trade.get("TradeDate") or "")[:10]
+            try:
+                trade_date = date.fromisoformat(raw_date)
+            except ValueError:
+                continue
+            if start_date <= trade_date < end_date:
+                filtered.append(trade)
+        return filtered
 
     @staticmethod
     def _money(value: Any) -> str:

@@ -121,6 +121,10 @@ Examples:
 - Summarize today's P&L.
 - Highlight operational risks.
 
+Trade and P&L questions respect explicit `today`, `yesterday`, `this week`, and `this month`
+phrases. Weekly ranges start on Monday, monthly ranges use calendar months, and an empty scoped
+result remains empty rather than falling back to older records.
+
 ## Environment Variables
 
 Backend:
